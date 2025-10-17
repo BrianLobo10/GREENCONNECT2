@@ -1,0 +1,286 @@
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import '../models/user.dart';
+import '../models/like.dart';
+import '../models/message.dart';
+
+class AppDatabase {
+  static final AppDatabase instance = AppDatabase._init();
+  static Database? _database;
+
+  AppDatabase._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('greenconnect.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
+  }
+
+  Future _createDB(Database db, int version) async {
+    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const textType = 'TEXT NOT NULL';
+    const intType = 'INTEGER NOT NULL';
+
+    // Tabla Usuarios
+    await db.execute('''
+      CREATE TABLE usuarios (
+        id $idType,
+        nombre $textType,
+        email $textType,
+        contrasena $textType,
+        edad $intType,
+        intereses $textType,
+        foto TEXT
+      )
+    ''');
+
+    // Tabla Likes
+    await db.execute('''
+      CREATE TABLE likes (
+        id $idType,
+        id_usuario $intType,
+        id_usuario_like $intType
+      )
+    ''');
+
+    // Tabla Mensajes
+    await db.execute('''
+      CREATE TABLE mensajes (
+        id $idType,
+        emisor_id $intType,
+        receptor_id $intType,
+        texto $textType,
+        fecha $textType
+      )
+    ''');
+
+    // Insertar usuarios de ejemplo
+    await _insertSampleUsers(db);
+  }
+
+  Future<void> _insertSampleUsers(Database db) async {
+    final sampleUsers = [
+      {
+        'nombre': 'María González',
+        'email': 'maria@example.com',
+        'contrasena': '123456',
+        'edad': 25,
+        'intereses': 'Viajes, Fotografía, Naturaleza',
+        'foto': '👩',
+      },
+      {
+        'nombre': 'Carlos Rodríguez',
+        'email': 'carlos@example.com',
+        'contrasena': '123456',
+        'edad': 28,
+        'intereses': 'Deportes, Música, Cocina',
+        'foto': '👨',
+      },
+      {
+        'nombre': 'Ana Martínez',
+        'email': 'ana@example.com',
+        'contrasena': '123456',
+        'edad': 23,
+        'intereses': 'Arte, Lectura, Yoga',
+        'foto': '👩‍🦰',
+      },
+      {
+        'nombre': 'Luis Pérez',
+        'email': 'luis@example.com',
+        'contrasena': '123456',
+        'edad': 30,
+        'intereses': 'Tecnología, Gaming, Ciclismo',
+        'foto': '👨‍💼',
+      },
+      {
+        'nombre': 'Sofía López',
+        'email': 'sofia@example.com',
+        'contrasena': '123456',
+        'edad': 26,
+        'intereses': 'Bailar, Cine, Café',
+        'foto': '👩‍🎨',
+      },
+      {
+        'nombre': 'Diego Sánchez',
+        'email': 'diego@example.com',
+        'contrasena': '123456',
+        'edad': 27,
+        'intereses': 'Surf, Fotografía, Aventuras',
+        'foto': '👨‍🦱',
+      },
+    ];
+
+    for (var user in sampleUsers) {
+      await db.insert('usuarios', user);
+    }
+  }
+
+  // CRUD Usuarios
+  Future<int> createUser(User user) async {
+    final db = await database;
+    return await db.insert('usuarios', user.toMap());
+  }
+
+  Future<User?> getUserByEmail(String email) async {
+    final db = await database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+
+    if (maps.isNotEmpty) {
+      return User.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<User?> getUserById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return User.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<User>> getAllUsers() async {
+    final db = await database;
+    final maps = await db.query('usuarios');
+    return maps.map((map) => User.fromMap(map)).toList();
+  }
+
+  Future<List<User>> getUsersExcept(int userId) async {
+    final db = await database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'id != ?',
+      whereArgs: [userId],
+    );
+    return maps.map((map) => User.fromMap(map)).toList();
+  }
+
+  Future<int> updateUser(User user) async {
+    final db = await database;
+    return await db.update(
+      'usuarios',
+      user.toMap(),
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
+  }
+
+  Future<int> deleteUser(int id) async {
+    final db = await database;
+    return await db.delete(
+      'usuarios',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // CRUD Likes
+  Future<int> createLike(Like like) async {
+    final db = await database;
+    return await db.insert('likes', like.toMap());
+  }
+
+  Future<List<Like>> getLikesByUser(int userId) async {
+    final db = await database;
+    final maps = await db.query(
+      'likes',
+      where: 'id_usuario = ?',
+      whereArgs: [userId],
+    );
+    return maps.map((map) => Like.fromMap(map)).toList();
+  }
+
+  Future<bool> hasLiked(int userId, int targetUserId) async {
+    final db = await database;
+    final maps = await db.query(
+      'likes',
+      where: 'id_usuario = ? AND id_usuario_like = ?',
+      whereArgs: [userId, targetUserId],
+    );
+    return maps.isNotEmpty;
+  }
+
+  Future<int> deleteLike(int userId, int targetUserId) async {
+    final db = await database;
+    return await db.delete(
+      'likes',
+      where: 'id_usuario = ? AND id_usuario_like = ?',
+      whereArgs: [userId, targetUserId],
+    );
+  }
+
+  // CRUD Mensajes
+  Future<int> createMessage(Message message) async {
+    final db = await database;
+    return await db.insert('mensajes', message.toMap());
+  }
+
+  Future<List<Message>> getMessages(int user1Id, int user2Id) async {
+    final db = await database;
+    final maps = await db.query(
+      'mensajes',
+      where: '(emisor_id = ? AND receptor_id = ?) OR (emisor_id = ? AND receptor_id = ?)',
+      whereArgs: [user1Id, user2Id, user2Id, user1Id],
+      orderBy: 'fecha ASC',
+    );
+    return maps.map((map) => Message.fromMap(map)).toList();
+  }
+
+  Future<List<int>> getConversationUserIds(int userId) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT DISTINCT 
+        CASE 
+          WHEN emisor_id = ? THEN receptor_id 
+          ELSE emisor_id 
+        END as user_id
+      FROM mensajes
+      WHERE emisor_id = ? OR receptor_id = ?
+    ''', [userId, userId, userId]);
+
+    return maps.map((map) => map['user_id'] as int).toList();
+  }
+
+  Future<Message?> getLastMessage(int user1Id, int user2Id) async {
+    final db = await database;
+    final maps = await db.query(
+      'mensajes',
+      where: '(emisor_id = ? AND receptor_id = ?) OR (emisor_id = ? AND receptor_id = ?)',
+      whereArgs: [user1Id, user2Id, user2Id, user1Id],
+      orderBy: 'fecha DESC',
+      limit: 1,
+    );
+
+    if (maps.isNotEmpty) {
+      return Message.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<void> close() async {
+    final db = await database;
+    await db.close();
+  }
+}
+
