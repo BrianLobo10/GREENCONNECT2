@@ -40,42 +40,52 @@ class ReactionBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _ReactionButton(
-                type: ReactionType.heart,
-                count: reactionCounts[ReactionType.heart] ?? 0,
-                isSelected: userReaction?.type == ReactionType.heart,
+                type: ReactionType.feliz,
+                count: reactionCounts[ReactionType.feliz] ?? 0,
+                isSelected: userReaction?.type == ReactionType.feliz,
                 onTap: () => _handleReaction(
                   context,
-                  ReactionType.heart,
+                  ReactionType.feliz,
                   userReaction,
                 ),
               ),
               _ReactionButton(
-                type: ReactionType.like,
-                count: reactionCounts[ReactionType.like] ?? 0,
-                isSelected: userReaction?.type == ReactionType.like,
+                type: ReactionType.encantado,
+                count: reactionCounts[ReactionType.encantado] ?? 0,
+                isSelected: userReaction?.type == ReactionType.encantado,
                 onTap: () => _handleReaction(
                   context,
-                  ReactionType.like,
+                  ReactionType.encantado,
                   userReaction,
                 ),
               ),
               _ReactionButton(
-                type: ReactionType.smile,
-                count: reactionCounts[ReactionType.smile] ?? 0,
-                isSelected: userReaction?.type == ReactionType.smile,
+                type: ReactionType.carcajada,
+                count: reactionCounts[ReactionType.carcajada] ?? 0,
+                isSelected: userReaction?.type == ReactionType.carcajada,
                 onTap: () => _handleReaction(
                   context,
-                  ReactionType.smile,
+                  ReactionType.carcajada,
                   userReaction,
                 ),
               ),
               _ReactionButton(
-                type: ReactionType.angry,
-                count: reactionCounts[ReactionType.angry] ?? 0,
-                isSelected: userReaction?.type == ReactionType.angry,
+                type: ReactionType.cool,
+                count: reactionCounts[ReactionType.cool] ?? 0,
+                isSelected: userReaction?.type == ReactionType.cool,
                 onTap: () => _handleReaction(
                   context,
-                  ReactionType.angry,
+                  ReactionType.cool,
+                  userReaction,
+                ),
+              ),
+              _ReactionButton(
+                type: ReactionType.enojado,
+                count: reactionCounts[ReactionType.enojado] ?? 0,
+                isSelected: userReaction?.type == ReactionType.enojado,
+                onTap: () => _handleReaction(
+                  context,
+                  ReactionType.enojado,
                   userReaction,
                 ),
               ),
@@ -141,11 +151,11 @@ class _ReactionButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              type.emoji,
-              style: TextStyle(
-                fontSize: isSelected ? 22 : 20,
-              ),
+            Image.asset(
+              type.iconPath,
+              width: isSelected ? 26 : 24,
+              height: isSelected ? 26 : 24,
+              fit: BoxFit.contain,
             ),
             if (count > 0) ...[
               const SizedBox(width: 4),
