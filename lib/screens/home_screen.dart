@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/users_provider.dart';
 import '../providers/messages_provider.dart';
 import 'users_screen.dart';
+import 'posts_screen.dart';
 import 'messages_screen.dart';
 import 'profile_screen.dart';
 
@@ -24,11 +25,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _screens = [
+      const PostsScreen(),
       const UsersScreen(),
       const MessagesScreen(),
       const ProfileScreen(),
     ];
-    _loadData();
+    // Cargar datos después del build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
@@ -70,10 +75,14 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           selectedItemColor: AppColors.primary,
           unselectedItemColor: AppColors.grey,
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.surface,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
           items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.article),
+              label: 'Publicaciones',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.people),
               label: 'Usuarios',

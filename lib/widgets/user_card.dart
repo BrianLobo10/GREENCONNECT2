@@ -61,9 +61,9 @@ class _UserCardState extends State<UserCard> with SingleTickerProviderStateMixin
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+              color: AppColors.primary.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -78,7 +78,7 @@ class _UserCardState extends State<UserCard> with SingleTickerProviderStateMixin
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Center(

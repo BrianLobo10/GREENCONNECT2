@@ -18,9 +18,7 @@ class UsersScreen extends StatelessWidget {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        color: AppColors.background,
         child: SafeArea(
           child: Column(
             children: [
@@ -36,10 +34,11 @@ class UsersScreen extends StatelessWidget {
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(15),
                       ),
-                      child: const Icon(
-                        Icons.eco,
-                        color: Colors.white,
-                        size: 30,
+                      child: Image.asset(
+                        'assets/icon/image.png',
+                        width: 30,
+                        height: 30,
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -48,7 +47,7 @@ class UsersScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'GreenConnect',
+                            'Wayira Space',
                             style: GoogleFonts.poppins(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -56,7 +55,7 @@ class UsersScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Descubre personas cercanas',
+                            'Conecta con tu comunidad',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: AppColors.grey,

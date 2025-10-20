@@ -36,9 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
-        ),
+        color: AppColors.primary,
         child: SafeArea(
           child: Column(
             children: [
@@ -69,23 +67,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // Avatar
               Container(
-                width: 120,
-                height: 120,
+                width: 130,
+                height: 130,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(35),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 25,
+                      offset: const Offset(0, 15),
                     ),
                   ],
                 ),
                 child: Center(
                   child: Text(
                     user.foto ?? '👤',
-                    style: const TextStyle(fontSize: 70),
+                    style: const TextStyle(fontSize: 80),
                   ),
                 ),
               ),

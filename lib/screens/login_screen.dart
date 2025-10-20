@@ -55,9 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        color: AppColors.background,
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -67,13 +65,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
+                    // Logo Wayira Space
                     Container(
-                      width: 100,
-                      height: 100,
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
                         color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(25),
+                        borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary.withOpacity(0.3),
@@ -82,26 +80,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.eco,
-                        size: 60,
-                        color: Colors.white,
+                      child: Image.asset(
+                        'assets/icon/image.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 30),
                     
                     // Título
                     Text(
-                      'Bienvenido',
+                      'Wayira Space',
                       style: GoogleFonts.poppins(
-                        fontSize: 32,
+                        fontSize: 36,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Inicia sesión para continuar',
+                      'Conecta con tu comunidad',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         color: AppColors.grey,

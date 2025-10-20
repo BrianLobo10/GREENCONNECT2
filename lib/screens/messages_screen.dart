@@ -18,9 +18,7 @@ class MessagesScreen extends StatelessWidget {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        color: AppColors.background,
         child: SafeArea(
           child: Column(
             children: [
@@ -94,9 +92,9 @@ class MessagesScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 5),
+                                      color: AppColors.primary.withOpacity(0.15),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 8),
                                     ),
                                   ],
                                 ),

@@ -106,9 +106,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        color: AppColors.background,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(

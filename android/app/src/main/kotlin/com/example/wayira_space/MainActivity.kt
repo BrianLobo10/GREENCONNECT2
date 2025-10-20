@@ -1,4 +1,4 @@
-package com.example.greenconnect2
+package com.example.wayira_space
 
 import io.flutter.embedding.android.FlutterActivity
 

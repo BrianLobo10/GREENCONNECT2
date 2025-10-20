@@ -1,5 +1,5 @@
-name: greenconnect2
-description: "A new Flutter project."
+name: wayira_space
+description: "Wayira Space - Red Social"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -58,6 +58,7 @@ dependencies:
   shared_preferences: ^2.2.3
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  timeago: ^3.7.0
 
 dev_dependencies:
   flutter_test:
@@ -74,9 +75,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/icon.png"
-  adaptive_icon_background: "#00C853"
-  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  image_path: "assets/icon/image.png"
+  adaptive_icon_background: "#FF6B35"
+  adaptive_icon_foreground: "assets/icon/image.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

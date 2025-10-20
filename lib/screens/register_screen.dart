@@ -85,9 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        color: AppColors.background,
         child: SafeArea(
           child: Column(
             children: [
@@ -102,7 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Crear Cuenta',
+                      'Wayira Space',
                       style: GoogleFonts.poppins(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,

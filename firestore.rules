@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Reglas para usuarios
+    match /usuarios/{userId} {
+      // Cualquiera puede leer perfiles de usuarios
+      allow read: if true;
+      // Solo el propietario puede actualizar su perfil
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // Cualquiera puede crear un usuario (para registro)
+      allow create: if true;
+      // Solo el propietario puede eliminar su perfil
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para likes
+    match /likes/{likeId} {
+      // Cualquiera autenticado puede leer y crear likes
+      allow read, create: if request.auth != null;
+      // Solo se pueden eliminar los propios likes
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.id_usuario;
+    }
+    
+    // Reglas para mensajes
+    match /mensajes/{messageId} {
+      // Solo los participantes pueden leer mensajes
+      allow read: if request.auth != null && 
+                     (request.auth.uid == resource.data.emisor_id || 
+                      request.auth.uid == resource.data.receptor_id);
+      // Solo usuarios autenticados pueden crear mensajes
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.emisor_id;
+      // Solo el emisor puede eliminar sus mensajes
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.emisor_id;
+    }
+    
+    // Reglas para posts (publicaciones)
+    match /posts/{postId} {
+      // Cualquiera puede leer posts
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear posts
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.user_id;
+      // Solo el autor puede actualizar su post
+      allow update: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+      // Solo el autor puede eliminar su post
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+    }
+    
+    // Reglas para reacciones
+    match /reactions/{reactionId} {
+      // Cualquiera puede leer reacciones
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear reacciones
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.user_id;
+      // Solo el autor puede actualizar su reacción
+      allow update: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+      // Solo el autor puede eliminar su reacción
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+    }
+    
+    // Reglas para comentarios
+    match /comments/{commentId} {
+      // Cualquiera puede leer comentarios
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear comentarios
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.user_id;
+      // Solo el sistema puede actualizar (para contadores de likes/dislikes)
+      allow update: if request.auth != null;
+      // Solo el autor puede eliminar su comentario
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+    }
+    
+    // Reglas para votos de comentarios
+    match /comment_votes/{voteId} {
+      // Cualquiera puede leer votos
+      allow read: if true;
+      // Solo usuarios autenticados pueden votar
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.user_id;
+      // Solo el autor puede actualizar su voto
+      allow update: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+      // Solo el autor puede eliminar su voto
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+    }
+  }
+}
+

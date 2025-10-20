@@ -63,9 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
-        ),
+        color: AppColors.primary,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -78,20 +76,21 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(35),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.eco,
-                      size: 70,
-                      color: AppColors.primary,
+                    child: Image.asset(
+                      'assets/icon/image.png',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
@@ -100,9 +99,9 @@ class _SplashScreenState extends State<SplashScreen>
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Text(
-                  'GreenConnect',
+                  'Wayira Space',
                   style: GoogleFonts.poppins(
-                    fontSize: 36,
+                    fontSize: 40,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -112,9 +111,9 @@ class _SplashScreenState extends State<SplashScreen>
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Text(
-                  'Conecta con personas cercanas',
+                  'Tu espacio social para volar alto',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: 18,
                     color: Colors.white.withOpacity(0.9),
                   ),
                 ),

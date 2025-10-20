@@ -323,9 +323,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        color: AppColors.background,
         child: Column(
           children: [
             // Lista de mensajes
@@ -579,7 +577,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
+                            color: AppColors.primary,
                             borderRadius: BorderRadius.circular(25),
                           ),
                           child: IconButton(
@@ -619,8 +617,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              gradient: isMe ? AppColors.primaryGradient : null,
-              color: isMe ? null : Colors.white,
+              color: isMe ? AppColors.primary : Colors.white,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(20),
                 topRight: const Radius.circular(20),
