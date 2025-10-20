@@ -42,10 +42,24 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToNextScreen() async {
-    await Future.delayed(const Duration(seconds: 3));
+    // Esperar a que termine la animación
+    await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
     
+    // Esperar a que el AuthProvider termine de cargar
     final authProvider = context.read<AuthProvider>();
+    int attempts = 0;
+    while (authProvider.isLoading && attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      attempts++;
+    }
+    
+    if (!mounted) return;
+    
+    // Esperar un poco más para que se vea la animación completa
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    
     if (authProvider.isAuthenticated) {
       context.go('/home');
     } else {

@@ -50,26 +50,6 @@ class ReactionBar extends StatelessWidget {
                 ),
               ),
               _ReactionButton(
-                type: ReactionType.encantado,
-                count: reactionCounts[ReactionType.encantado] ?? 0,
-                isSelected: userReaction?.type == ReactionType.encantado,
-                onTap: () => _handleReaction(
-                  context,
-                  ReactionType.encantado,
-                  userReaction,
-                ),
-              ),
-              _ReactionButton(
-                type: ReactionType.carcajada,
-                count: reactionCounts[ReactionType.carcajada] ?? 0,
-                isSelected: userReaction?.type == ReactionType.carcajada,
-                onTap: () => _handleReaction(
-                  context,
-                  ReactionType.carcajada,
-                  userReaction,
-                ),
-              ),
-              _ReactionButton(
                 type: ReactionType.cool,
                 count: reactionCounts[ReactionType.cool] ?? 0,
                 isSelected: userReaction?.type == ReactionType.cool,
@@ -86,6 +66,26 @@ class ReactionBar extends StatelessWidget {
                 onTap: () => _handleReaction(
                   context,
                   ReactionType.enojado,
+                  userReaction,
+                ),
+              ),
+              _ReactionButton(
+                type: ReactionType.triste,
+                count: reactionCounts[ReactionType.triste] ?? 0,
+                isSelected: userReaction?.type == ReactionType.triste,
+                onTap: () => _handleReaction(
+                  context,
+                  ReactionType.triste,
+                  userReaction,
+                ),
+              ),
+              _ReactionButton(
+                type: ReactionType.sorprendido,
+                count: reactionCounts[ReactionType.sorprendido] ?? 0,
+                isSelected: userReaction?.type == ReactionType.sorprendido,
+                onTap: () => _handleReaction(
+                  context,
+                  ReactionType.sorprendido,
                   userReaction,
                 ),
               ),

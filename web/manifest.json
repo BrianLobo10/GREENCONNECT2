@@ -1,11 +1,11 @@
 {
-    "name": "greenconnect2",
-    "short_name": "greenconnect2",
+    "name": "Wayira Space",
+    "short_name": "Wayira Space",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FF6B35",
+    "theme_color": "#FF6B35",
+    "description": "Tu espacio social para volar alto",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

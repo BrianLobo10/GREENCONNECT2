@@ -38,6 +38,20 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val versionName = defaultConfig.versionName
+            val buildType = buildType.name
+            
+            output.outputFileName = if (buildType == "release") {
+                "WayiraSpace-v${versionName}-release.apk"
+            } else {
+                "WayiraSpace-v${versionName}-debug.apk"
+            }
+        }
+    }
 }
 
 flutter {

@@ -1,22 +1,22 @@
 enum ReactionType {
   feliz,        // carita feliz
-  encantado,    // encantado/enamorado
-  carcajada,    // risa a carcajadas
   cool,         // cool/genial
-  enojado;      // enojado
+  enojado,      // enojado
+  triste,       // triste
+  sorprendido;  // sorprendido
 
   String get iconPath {
     switch (this) {
       case ReactionType.feliz:
-        return 'assets/icon/feliz.png';
-      case ReactionType.encantado:
-        return 'assets/icon/encantado.png';
-      case ReactionType.carcajada:
-        return 'assets/icon/carcajada.png';
+        return 'assets/icon/Feliz.png';
       case ReactionType.cool:
-        return 'assets/icon/cool.png';
+        return 'assets/icon/Cool.png';
       case ReactionType.enojado:
-        return 'assets/icon/enojado.png';
+        return 'assets/icon/Enojado.png';
+      case ReactionType.triste:
+        return 'assets/icon/Triste.png';
+      case ReactionType.sorprendido:
+        return 'assets/icon/Sorprendido.png';
     }
   }
 
@@ -24,14 +24,14 @@ enum ReactionType {
     switch (this) {
       case ReactionType.feliz:
         return 'feliz';
-      case ReactionType.encantado:
-        return 'encantado';
-      case ReactionType.carcajada:
-        return 'carcajada';
       case ReactionType.cool:
         return 'cool';
       case ReactionType.enojado:
         return 'enojado';
+      case ReactionType.triste:
+        return 'triste';
+      case ReactionType.sorprendido:
+        return 'sorprendido';
     }
   }
 
@@ -39,23 +39,26 @@ enum ReactionType {
     switch (value) {
       case 'feliz':
         return ReactionType.feliz;
-      case 'encantado':
-        return ReactionType.encantado;
-      case 'carcajada':
-        return ReactionType.carcajada;
       case 'cool':
         return ReactionType.cool;
       case 'enojado':
         return ReactionType.enojado;
+      case 'triste':
+        return ReactionType.triste;
+      case 'sorprendido':
+        return ReactionType.sorprendido;
       // Mantener compatibilidad con datos antiguos
+      case 'encantado':
       case 'heart':
-        return ReactionType.encantado;
+        return ReactionType.feliz;
       case 'like':
         return ReactionType.cool;
       case 'smile':
         return ReactionType.feliz;
       case 'angry':
         return ReactionType.enojado;
+      case 'carcajada':
+        return ReactionType.feliz;
       default:
         return ReactionType.feliz;
     }
