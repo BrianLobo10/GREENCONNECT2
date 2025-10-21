@@ -5,25 +5,38 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
 import '../providers/posts_provider.dart';
+import '../services/firestore_service.dart';
 import '../utils/app_colors.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/mention_autocomplete.dart';
 import '../widgets/image_carousel.dart';
+import '../models/post.dart';
 
-class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+class EditPostScreen extends StatefulWidget {
+  final String postId;
+
+  const EditPostScreen({super.key, required this.postId});
 
   @override
-  State<CreatePostScreen> createState() => _CreatePostScreenState();
+  State<EditPostScreen> createState() => _EditPostScreenState();
 }
 
-class _CreatePostScreenState extends State<CreatePostScreen> {
+class _EditPostScreenState extends State<EditPostScreen> {
   final TextEditingController _contentController = TextEditingController();
   String _currentText = '';
   final ImagePicker _imagePicker = ImagePicker();
   List<File> _selectedImages = [];
   List<File> _selectedVideos = [];
   bool _isSubmitting = false;
+  Post? _originalPost;
+  bool _isLoading = true;
+  final FirestoreService _firestoreService = FirestoreService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPost();
+  }
 
   @override
   void dispose() {
@@ -31,8 +44,47 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
+  Future<void> _loadPost() async {
+    try {
+      final post = await FirestoreService.instance.getPostById(widget.postId);
+      if (post != null) {
+        setState(() {
+          _originalPost = post;
+          _contentController.text = post.contenido;
+          _currentText = post.contenido;
+          _isLoading = false;
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Publicación no encontrada')),
+          );
+          context.pop();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar publicación: $e')),
+        );
+        context.pop();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Cargando...'),
+          backgroundColor: AppColors.primary,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.currentUser;
 
@@ -54,7 +106,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
             const SizedBox(width: 12),
             const Text(
-              'Crear Publicación',
+              'Editar Publicación',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -67,9 +119,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           TextButton(
-            onPressed: _isSubmitting ? null : _submitPost,
+            onPressed: _isSubmitting ? null : _updatePost,
             child: Text(
-              'Publicar',
+              'Actualizar',
               style: TextStyle(
                 color: _isSubmitting ? Colors.grey : Colors.white,
                 fontWeight: FontWeight.bold,
@@ -107,7 +159,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           ),
                         ),
                         Text(
-                          '¿Qué quieres compartir?',
+                          'Edita tu publicación',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -133,7 +185,61 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Vista previa de las imágenes/videos seleccionados
+              // Mostrar imágenes existentes si las hay
+              if (_originalPost?.imageUrls != null && _originalPost!.imageUrls!.isNotEmpty) ...[
+                Container(
+                  height: 300,
+                  child: ImageCarousel(
+                    imageUrls: _originalPost!.imageUrls!,
+                    height: 300,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    'Imágenes actuales (no se pueden editar)',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ] else if (_originalPost?.imageUrl != null && _originalPost!.imageUrl!.isNotEmpty) ...[
+                // Mostrar imagen única si existe
+                Container(
+                  height: 300,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      _originalPost!.imageUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.error, size: 50),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    'Imagen actual (no se puede editar)',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Vista previa de las nuevas imágenes/videos seleccionados
               if (_selectedImages.isNotEmpty || _selectedVideos.isNotEmpty) ...[
                 Container(
                   height: 300,
@@ -159,7 +265,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _pickImages,
                       icon: const Icon(Icons.photo_library),
-                      label: const Text('Imágenes'),
+                      label: const Text('Agregar Imágenes'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -172,7 +278,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _pickVideo,
                       icon: const Icon(Icons.videocam),
-                      label: const Text('Video'),
+                      label: const Text('Agregar Video'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.secondary,
                         foregroundColor: Colors.white,
@@ -362,13 +468,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
   }
 
-  Future<void> _submitPost() async {
+  Future<void> _updatePost() async {
     if (_contentController.text.trim().isEmpty && 
         _selectedImages.isEmpty && 
         _selectedVideos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Agrega texto, imagen o video para publicar'),
+          content: Text('Agrega texto, imagen o video para actualizar'),
         ),
       );
       return;
@@ -386,9 +492,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final postsProvider = context.read<PostsProvider>();
 
       if (_selectedImages.isNotEmpty) {
-        // ERROR: Hay una coma y una "s" extra aquí:
-        //          imageFile: _selectedImages.first,s
-        // Debería ser:
+        // Actualizar post con nuevas imágenes
         await postsProvider.createPostWithImage(
           userId: currentUser.id!,
           userName: currentUser.nombre,
@@ -397,7 +501,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           imageFile: _selectedImages.first,
         );
       } else if (_selectedVideos.isNotEmpty) {
-        // Crear post con video
+        // Actualizar post con nuevo video
         await postsProvider.createPostWithVideo(
           userId: currentUser.id!,
           userName: currentUser.nombre,
@@ -406,19 +510,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           videoFile: _selectedVideos.first,
         );
       } else {
-        // Crear post solo con texto
-        await postsProvider.createPost(
-          userId: currentUser.id!,
-          userName: currentUser.nombre,
-          userPhoto: currentUser.foto,
-          contenido: _contentController.text.trim(),
-        );
+        // Solo actualizar contenido de texto
+        await _firestoreService.editPost(widget.postId, _contentController.text.trim());
       }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Publicación creada exitosamente ✓'),
+            content: Text('Publicación actualizada exitosamente ✓'),
             duration: Duration(seconds: 2),
           ),
         );
@@ -427,7 +526,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al crear publicación: $e')),
+          SnackBar(content: Text('Error al actualizar publicación: $e')),
         );
       }
     } finally {

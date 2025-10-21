@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../utils/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
+import '../widgets/champion_avatar_selector.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -32,6 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     '🐮', '🦆', '🐔', '🐙', '🐬', '🦀', '🐠', '🦋'
   ];
   String _selectedAvatar = '😀';
+  String? _selectedChampionAvatar;
 
   @override
   void dispose() {
@@ -53,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         contrasena: _passwordController.text,
         edad: int.parse(_ageController.text),
         intereses: _interestsController.text.trim(),
-        foto: _selectedAvatar,
+        foto: _selectedChampionAvatar ?? _selectedAvatar,
       );
 
       final success = await authProvider.register(user);
@@ -120,8 +122,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       children: [
                         // Avatar selector
+                        // Botón de LoL (Prioridad)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => ChampionAvatarSelector(
+                                  currentAvatarUrl: _selectedChampionAvatar,
+                                  onAvatarSelected: (url) {
+                                    setState(() {
+                                      _selectedChampionAvatar = url;
+                                      _selectedAvatar = ''; // Limpiar emoji seleccionado
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.sports_esports, size: 20),
+                            label: const Text('Elegir Campeón de LoL'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                            ),
+                          ),
+                        ),
+                        
                         Text(
-                          'Elige tu avatar',
+                          'O elige un emoji:',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../models/post.dart';
+import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/posts_provider.dart';
+import '../services/firestore_service.dart';
 import '../utils/app_colors.dart';
+import '../utils/text_utils.dart';
 import 'reaction_bar.dart';
 import 'comments_list.dart';
 import 'user_avatar.dart';
+import 'video_player_widget.dart';
+import 'image_carousel.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class PostCard extends StatefulWidget {
@@ -25,12 +31,30 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool _showComments = false;
+  User? _postUser;
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   @override
   void initState() {
     super.initState();
     // Configurar español para timeago
     timeago.setLocaleMessages('es', timeago.EsMessages());
+    _loadPostUser();
+  }
+
+
+
+  Future<void> _loadPostUser() async {
+    try {
+      final user = await _firestoreService.getUserById(widget.post.userId);
+      if (mounted && user != null) {
+        setState(() {
+          _postUser = user;
+        });
+      }
+    } catch (e) {
+      // Si falla, usar datos del post
+    }
   }
 
   @override
@@ -40,10 +64,10 @@ class _PostCardState extends State<PostCard> {
     final isOwner = widget.post.userId == currentUserId;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 8,
-      shadowColor: AppColors.primary.withOpacity(0.2),
+      elevation: 10,
+      shadowColor: AppColors.primary.withOpacity(0.3),
       color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +76,7 @@ class _PostCardState extends State<PostCard> {
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: UserAvatar(
-              photoUrl: widget.post.userPhoto,
+              photoUrl: _postUser?.foto ?? widget.post.userPhoto,
               userName: widget.post.userName,
               radius: 24,
               onTap: widget.onUserTap,
@@ -74,23 +98,36 @@ class _PostCardState extends State<PostCard> {
                 fontSize: 13,
               ),
             ),
-            trailing: isOwner
-                ? PopupMenuButton(
-                    icon: const Icon(Icons.more_vert),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Eliminar', style: TextStyle(color: Colors.red)),
-                          ],
+            trailing: PopupMenuButton(
+              icon: const Icon(Icons.more_vert),
+              itemBuilder: (context) => [
+                      if (isOwner) ...[
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: AppColors.primary),
+                              SizedBox(width: 8),
+                              Text('Editar'),
+                            ],
+                          ),
                         ),
-                      ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Eliminar', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                     onSelected: (value) async {
-                      if (value == 'delete') {
+                      if (value == 'edit') {
+                        _editPost();
+                      } else if (value == 'delete') {
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -120,50 +157,87 @@ class _PostCardState extends State<PostCard> {
                         }
                       }
                     },
-                  )
-                : null,
+                  ),
           ),
+
+          // Indicador de compartido
+          if (widget.post.isShared)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.repeat, size: 14, color: AppColors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Compartido de ${widget.post.sharedFromUserName}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           // Contenido del post
           if (widget.post.contenido.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                widget.post.contenido,
-                style: const TextStyle(fontSize: 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 15, color: Colors.black),
+                      children: TextUtils.formatTextWithLinks(
+                        widget.post.contenido,
+                        defaultStyle: const TextStyle(fontSize: 15, color: Colors.black),
+                        hashtagStyle: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        mentionStyle: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.post.isEdited)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '(editado)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
-          // Imagen del post
-          if (widget.post.imageUrl != null)
+          // Imagen o video del post
+          if (widget.post.mediaType == MediaType.image && widget.post.imageUrl != null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Image.network(
-                widget.post.imageUrl!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 200,
-                    alignment: Alignment.center,
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.error, size: 50, color: Colors.grey),
-                  );
-                },
+              child: ImageCarousel(
+                imageUrls: widget.post.imageUrls ?? [widget.post.imageUrl!],
+                height: 400,
               ),
+            ),
+
+          // Video del post
+          if (widget.post.mediaType == MediaType.video && widget.post.videoUrl != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: VideoPlayerWidget(videoUrl: widget.post.videoUrl!),
             ),
 
           // Barra de reacciones
@@ -215,5 +289,13 @@ class _PostCardState extends State<PostCard> {
       ),
     );
   }
+
+  void _editPost() {
+    // Navegar a la pantalla de edición completa
+    context.push('/edit-post/${widget.post.id}');
+  }
+
+
+
 }
 

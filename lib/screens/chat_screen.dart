@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,11 @@ import '../providers/auth_provider.dart';
 import '../providers/messages_provider.dart';
 import '../services/firestore_service.dart';
 import '../models/user.dart';
+import '../models/message.dart';
+import '../widgets/user_avatar.dart';
+import 'voice_call_screen.dart';
+import 'video_call_screen.dart';
+import '../services/call_notification_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String userId;
@@ -29,11 +35,25 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isSendingImage = false;
   File? _selectedImage;
   bool _showEmojiPicker = false;
+  bool _isSelectionMode = false;
+  List<Message> _selectedMessages = [];
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Recargar mensajes cada 30 segundos como respaldo
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadData();
+      }
+    });
+    
+    // Marcar mensajes como leídos cuando se abre el chat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markMessagesAsRead();
+    });
   }
 
   int _previousMessageCount = 0;
@@ -223,6 +243,7 @@ class _ChatScreenState extends State<ChatScreen> {
     messagesProvider.removeListener(_onMessagesChanged);
     _messageController.dispose();
     _scrollController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -287,40 +308,88 @@ class _ChatScreenState extends State<ChatScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                _otherUser!.foto ?? '👤',
-                style: const TextStyle(fontSize: 24),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        title: _isSelectionMode 
+            ? Text(
+                '${_selectedMessages.length} seleccionado${_selectedMessages.length > 1 ? 's' : ''}',
+                style: const TextStyle(color: Colors.white),
+              )
+            : Row(
                 children: [
-                  Text(
-                    _otherUser!.nombre,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  UserAvatar(
+                    photoUrl: _otherUser!.foto,
+                    userName: _otherUser!.nombre,
+                    radius: 20,
                   ),
-                  Text(
-                    '${_otherUser!.edad} años',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.9),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _otherUser!.nombre,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          '${_otherUser!.edad} años',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+        actions: [
+          if (_isSelectionMode) ...[
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: _exitSelectionMode,
+            ),
+            IconButton(
+              icon: const Icon(Icons.forward, color: Colors.white),
+              onPressed: _selectedMessages.isNotEmpty ? _forwardSelectedMessages : null,
+            ),
+          ] else ...[
+            // Botón de llamada de voz
+            IconButton(
+              onPressed: () => _startVoiceCall(),
+              icon: const Icon(Icons.call, color: Colors.white),
+              tooltip: 'Llamada de voz',
+            ),
+            // Botón de videollamada
+            IconButton(
+              onPressed: () => _startVideoCall(),
+              icon: const Icon(Icons.videocam, color: Colors.white),
+              tooltip: 'Videollamada',
+            ),
+            PopupMenuButton(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'clear_chat',
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility_off, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Ocultar chat', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+              onSelected: (value) {
+                if (value == 'clear_chat') {
+                  _showClearChatDialog();
+                }
+              },
             ),
           ],
-        ),
+        ],
       ),
       body: Container(
         color: AppColors.background,
@@ -366,14 +435,57 @@ class _ChatScreenState extends State<ChatScreen> {
                         final isMe = message.emisorId == currentUserId;
 
                         return GestureDetector(
-                          onLongPress: isMe && message.id != null
-                              ? () => _showDeleteDialog(message.id!, message.fecha)
-                              : null,
-                          child: _buildMessageBubble(
-                            message.texto,
-                            isMe,
-                            message.fecha,
-                            message.imageUrl,
+                          onLongPress: () {
+                            if (!_isSelectionMode) {
+                              _enterSelectionMode();
+                              _toggleMessageSelection(message); // Seleccionar el mensaje que se mantuvo presionado
+                            } else {
+                              _toggleMessageSelection(message);
+                            }
+                          },
+                          onTap: _isSelectionMode 
+                              ? () => _toggleMessageSelection(message)
+                              : (isMe && message.id != null
+                                  ? () => _showDeleteDialog(message.id!, message.fecha)
+                                  : null),
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: _isSelectionMode && _selectedMessages.contains(message)
+                                    ? BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primary.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      )
+                                    : null,
+                                child: _buildMessageBubble(
+                                  message,
+                                  isMe,
+                                ),
+                              ),
+                              if (_isSelectionMode && _selectedMessages.contains(message))
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         );
                       },
@@ -473,6 +585,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
               ),
+
 
             // Campo de texto
             Container(
@@ -605,7 +718,7 @@ class _ChatScreenState extends State<ChatScreen> {
     '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🎯', '💎',
   ];
 
-  Widget _buildMessageBubble(String text, bool isMe, DateTime fecha, String? imageUrl) {
+  Widget _buildMessageBubble(Message message, bool isMe) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -635,12 +748,43 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Indicador de reenvío
+                if (message.isForwarded) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isMe ? Colors.white.withOpacity(0.2) : AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.forward,
+                          size: 14,
+                          color: isMe ? Colors.white70 : AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Reenviado de ${message.originalSenderName ?? 'Usuario'}',
+                          style: GoogleFonts.poppins(
+                            color: isMe ? Colors.white70 : AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                
                 // Mostrar imagen si existe
-                if (imageUrl != null) ...[
+                if (message.imageUrl != null) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: CachedNetworkImage(
-                      imageUrl: imageUrl,
+                      imageUrl: message.imageUrl!,
                       width: 200,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
@@ -661,25 +805,38 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   ),
-                  if (text.isNotEmpty && text != '📷 Imagen')
+                  if (message.texto.isNotEmpty && message.texto != '📷 Imagen')
                     const SizedBox(height: 8),
                 ],
                 // Mostrar texto si no es solo "📷 Imagen"
-                if (text.isNotEmpty && text != '📷 Imagen')
+                if (message.texto.isNotEmpty && message.texto != '📷 Imagen')
                   Text(
-                    text,
+                    message.texto,
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       color: isMe ? Colors.white : AppColors.black,
                     ),
                   ),
                 const SizedBox(height: 4),
-                Text(
-                  DateFormat('HH:mm').format(fecha),
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: isMe ? Colors.white.withOpacity(0.8) : AppColors.grey,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      DateFormat('HH:mm').format(message.fecha),
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: isMe ? Colors.white.withOpacity(0.8) : AppColors.grey,
+                      ),
+                    ),
+                    if (isMe) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        message.leido ? Icons.done_all : Icons.done,
+                        size: 12,
+                        color: message.leido ? Colors.blue : Colors.white.withOpacity(0.8),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -687,6 +844,238 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  void _showForwardDialog(Message message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Reenviar mensaje'),
+          content: const Text('¿Quieres reenviar este mensaje a otro usuario?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.push('/forward-message', extra: message);
+              },
+              child: const Text('Reenviar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showClearChatDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ocultar chat'),
+          content: const Text('¿Estás seguro de que quieres ocultar todos los mensajes de esta conversación? Los mensajes se ocultarán solo para ti, el otro usuario podrá seguir viéndolos.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _clearChat();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Ocultar chat'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _clearChat() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.currentUser?.id;
+      if (currentUserId == null) return;
+
+      // Eliminar todos los mensajes de la conversación
+      final messagesProvider = context.read<MessagesProvider>();
+      await messagesProvider.clearChatMessages(currentUserId, widget.userId);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chat oculto exitosamente'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al vaciar chat: $e')),
+        );
+      }
+    }
+  }
+
+  void _enterSelectionMode() {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedMessages.clear();
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedMessages.clear();
+    });
+  }
+
+  void _toggleMessageSelection(Message message) {
+    setState(() {
+      if (_selectedMessages.contains(message)) {
+        _selectedMessages.remove(message);
+      } else {
+        _selectedMessages.add(message);
+      }
+    });
+  }
+
+  void _forwardSelectedMessages() {
+    if (_selectedMessages.isEmpty) return;
+    
+    // Ordenar mensajes por fecha para mantener el orden
+    _selectedMessages.sort((a, b) => a.fecha.compareTo(b.fecha));
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reenviar ${_selectedMessages.length} mensaje${_selectedMessages.length > 1 ? 's' : ''}'),
+        content: Text('¿Quieres reenviar estos mensajes a otro usuario?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push('/forward-messages', extra: _selectedMessages);
+            },
+            child: const Text('Reenviar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Métodos para llamadas
+  void _startVoiceCall() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Llamada de voz'),
+        content: Text('¿Iniciar llamada de voz con ${_otherUser?.nombre}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initiateCall('voice');
+            },
+            child: const Text('Llamar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startVideoCall() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Videollamada'),
+        content: Text('¿Iniciar videollamada con ${_otherUser?.nombre}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initiateCall('video');
+            },
+            child: const Text('Llamar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _initiateCall(String callType) async {
+    // Crear un canal único para la llamada
+    final channelName = 'call_${widget.userId}_${DateTime.now().millisecondsSinceEpoch}';
+    
+    // Enviar notificación de llamada
+    final authProvider = context.read<AuthProvider>();
+    final currentUser = authProvider.currentUser;
+    
+    if (currentUser != null) {
+      final callNotificationService = CallNotificationService();
+      await callNotificationService.sendIncomingCallNotification(
+        callerId: currentUser.id!,
+        callerName: currentUser.nombre,
+        receiverId: widget.userId,
+        channelName: channelName,
+        callType: callType,
+      );
+    }
+    
+    if (callType == 'voice') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VoiceCallScreen(
+            channelName: channelName,
+            otherUserName: _otherUser?.nombre ?? 'Usuario',
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VideoCallScreen(
+            channelName: channelName,
+            otherUserName: _otherUser?.nombre ?? 'Usuario',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _markMessagesAsRead() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.currentUser?.id;
+      
+      if (currentUserId != null) {
+        await FirestoreService.instance.markMessagesAsRead(currentUserId, widget.userId);
+      }
+    } catch (e) {
+      debugPrint('Error marcando mensajes como leídos: $e');
+    }
   }
 }
 

@@ -88,10 +88,46 @@ class PostsProvider with ChangeNotifier {
         userName: userName,
         userPhoto: userPhoto,
         contenido: contenido,
+        mediaType: MediaType.image,
         fecha: DateTime.now(),
       );
 
       await _firestoreService.createPostWithImage(post, imageFile);
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Crear post con video
+  Future<bool> createPostWithVideo({
+    required String userId,
+    required String userName,
+    String? userPhoto,
+    required String contenido,
+    required File videoFile,
+  }) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final post = Post(
+        userId: userId,
+        userName: userName,
+        userPhoto: userPhoto,
+        contenido: contenido,
+        mediaType: MediaType.video,
+        fecha: DateTime.now(),
+      );
+
+      await _firestoreService.createPostWithVideo(post, videoFile);
       
       _isLoading = false;
       notifyListeners();

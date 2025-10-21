@@ -2,19 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import '../utils/app_colors.dart';
+import 'user_avatar.dart';
 
 class UserCard extends StatefulWidget {
   final User user;
   final bool hasLiked;
-  final VoidCallback onLike;
-  final VoidCallback onMessage;
+  final VoidCallback? onLike;
+  final VoidCallback? onMessage;
+  final VoidCallback? onTap;
 
   const UserCard({
     super.key,
     required this.user,
-    required this.hasLiked,
-    required this.onLike,
-    required this.onMessage,
+    this.hasLiked = false,
+    this.onLike,
+    this.onMessage,
+    this.onTap,
   });
 
   @override
@@ -47,22 +50,24 @@ class _UserCardState extends State<UserCard> with SingleTickerProviderStateMixin
     _animationController.forward().then((_) {
       _animationController.reverse();
     });
-    widget.onLike();
+    widget.onLike?.call();
   }
 
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _scaleAnimation,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.2),
-              blurRadius: 20,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.2),
+                blurRadius: 20,
               offset: const Offset(0, 10),
             ),
           ],
@@ -74,19 +79,11 @@ class _UserCardState extends State<UserCard> with SingleTickerProviderStateMixin
               // Avatar
               Hero(
                 tag: 'user_${widget.user.id}',
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Center(
-                    child: Text(
-                      widget.user.foto ?? '👤',
-                      style: const TextStyle(fontSize: 45),
-                    ),
-                  ),
+                child: UserAvatar(
+                  photoUrl: widget.user.foto,
+                  userName: widget.user.nombre,
+                  radius: 40,
+                  onTap: widget.onTap,
                 ),
               ),
               const SizedBox(width: 16),
@@ -175,7 +172,7 @@ class _UserCardState extends State<UserCard> with SingleTickerProviderStateMixin
                         Icons.chat_bubble,
                         color: AppColors.primary,
                       ),
-                      onPressed: widget.onMessage,
+                      onPressed: widget.onMessage ?? () {},
                     ),
                   ),
                 ],
@@ -183,6 +180,7 @@ class _UserCardState extends State<UserCard> with SingleTickerProviderStateMixin
             ],
           ),
         ),
+      ),
       ),
     );
   }

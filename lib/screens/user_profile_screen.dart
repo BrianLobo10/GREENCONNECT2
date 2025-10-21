@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import '../models/post.dart';
+import '../providers/auth_provider.dart';
 import '../providers/posts_provider.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_colors.dart';
 import '../widgets/post_card.dart';
+import '../widgets/user_avatar.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -25,6 +27,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   User? _user;
   bool _isLoading = true;
   int _likesCount = 0;
+  int _followersCount = 0;
+  int _followingCount = 0;
+  bool _isFollowing = false;
 
   @override
   void initState() {
@@ -36,11 +41,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     try {
       final user = await _firestoreService.getUserById(widget.userId);
       final likesCount = await _firestoreService.getUserLikesCount(widget.userId);
+      final followersCount = await _firestoreService.getFollowersCount(widget.userId);
+      final followingCount = await _firestoreService.getFollowingCount(widget.userId);
+      
+      // Verificar si el usuario actual lo sigue
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.currentUser?.id;
+      bool isFollowing = false;
+      if (currentUserId != null) {
+        isFollowing = await _firestoreService.isFollowing(currentUserId, widget.userId);
+      }
       
       if (mounted) {
         setState(() {
           _user = user;
           _likesCount = likesCount;
+          _followersCount = followersCount;
+          _followingCount = followingCount;
+          _isFollowing = isFollowing;
           _isLoading = false;
         });
       }
@@ -51,6 +69,34 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al cargar perfil: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    final authProvider = context.read<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id;
+    if (currentUserId == null) return;
+    
+    try {
+      if (_isFollowing) {
+        await _firestoreService.unfollowUser(currentUserId, widget.userId);
+        setState(() {
+          _isFollowing = false;
+          _followersCount--;
+        });
+      } else {
+        await _firestoreService.followUser(currentUserId, widget.userId);
+        setState(() {
+          _isFollowing = true;
+          _followersCount++;
+        });
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -113,37 +159,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: _user!.foto != null && _user!.foto!.startsWith('http')
-                      ? Image.network(
-                          _user!.foto!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Text(
-                                _user!.nombre[0].toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 50,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            );
-                          },
-                        )
-                      : Center(
-                          child: Text(
-                            _user!.foto ?? _user!.nombre[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: _user!.foto != null && !_user!.foto!.startsWith('http')
-                                  ? 70
-                                  : 50,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
+                child: Center(
+                  child: UserAvatar(
+                    photoUrl: _user!.foto,
+                    userName: _user!.nombre,
+                    radius: 50,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -167,27 +188,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               const SizedBox(height: 10),
               
-              // Contador de likes
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+              // Stats: Seguidores, Seguidos, Likes
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildStatItem(_followersCount, 'Seguidores'),
+                  const SizedBox(width: 30),
+                  _buildStatItem(_followingCount, 'Seguidos'),
+                  const SizedBox(width: 30),
+                  _buildStatItem(_likesCount, 'Likes'),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Botón de seguir
+              ElevatedButton.icon(
+                onPressed: _toggleFollow,
+                icon: Icon(
+                  _isFollowing ? Icons.person_remove : Icons.person_add,
+                  size: 18,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.favorite, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$_likesCount likes recibidos',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                label: Text(
+                  _isFollowing ? 'Dejar de seguir' : 'Seguir',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isFollowing ? Colors.grey : Colors.white,
+                  foregroundColor: _isFollowing ? Colors.white : AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  elevation: 5,
                 ),
               ),
               const SizedBox(height: 20),
@@ -290,15 +324,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     );
                                   }
 
-                                  return ListView.builder(
+                                  return GridView.builder(
+                                    padding: const EdgeInsets.all(8),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      childAspectRatio: 1,
+                                    ),
                                     itemCount: posts.length,
                                     itemBuilder: (context, index) {
-                                      return PostCard(
-                                        post: posts[index],
-                                        onUserTap: () {
-                                          // Ya estamos en el perfil del usuario
-                                        },
-                                      );
+                                      final post = posts[index];
+                                      return _buildPostGridItem(post);
                                     },
                                   );
                                 },
@@ -315,6 +352,130 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPostGridItem(Post post) {
+    return GestureDetector(
+      onTap: () {
+        _showPostDetail(post);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.lightGrey, width: 1),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (post.mediaType == MediaType.image && post.imageUrl != null)
+                Image.network(
+                  post.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildPlaceholder(post);
+                  },
+                )
+              else if (post.mediaType == MediaType.video)
+                Container(
+                  color: Colors.black87,
+                  child: const Icon(
+                    Icons.play_circle_outline,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                )
+              else
+                _buildPlaceholder(post),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(Post post) {
+    return Container(
+      color: AppColors.primary.withOpacity(0.1),
+      padding: const EdgeInsets.all(8),
+      child: Center(
+        child: Text(
+          post.contenido.isNotEmpty
+              ? post.contenido.substring(0, post.contenido.length > 50 ? 50 : post.contenido.length)
+              : 'Publicación',
+          style: TextStyle(
+            fontSize: 10,
+            color: AppColors.grey,
+          ),
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  void _showPostDetail(Post post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(25),
+              topRight: Radius.circular(25),
+            ),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                PostCard(post: post),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(int count, String label) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.9),
+          ),
+        ),
+      ],
     );
   }
 

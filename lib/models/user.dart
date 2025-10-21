@@ -6,6 +6,10 @@ class User {
   final int edad;
   final String intereses;
   final String? foto;
+  final bool isVerified;
+  final bool isOnline;
+  final DateTime? lastSeen;
+  final String? bio;
 
   User({
     this.id,
@@ -15,6 +19,10 @@ class User {
     required this.edad,
     required this.intereses,
     this.foto,
+    this.isVerified = false,
+    this.isOnline = false,
+    this.lastSeen,
+    this.bio,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +33,10 @@ class User {
       'edad': edad,
       'intereses': intereses,
       'foto': foto,
+      'is_verified': isVerified,
+      'is_online': isOnline,
+      'last_seen': lastSeen?.toIso8601String(),
+      'bio': bio,
     };
     // No incluir ID en el map para Firestore
     return map;
@@ -39,6 +51,10 @@ class User {
       edad: map['edad'] as int,
       intereses: map['intereses'] as String,
       foto: map['foto'] as String?,
+      isVerified: map['is_verified'] as bool? ?? false,
+      isOnline: map['is_online'] as bool? ?? false,
+      lastSeen: map['last_seen'] != null ? DateTime.parse(map['last_seen'] as String) : null,
+      bio: map['bio'] as String?,
     );
   }
 
@@ -50,6 +66,10 @@ class User {
     int? edad,
     String? intereses,
     String? foto,
+    bool? isVerified,
+    bool? isOnline,
+    DateTime? lastSeen,
+    String? bio,
   }) {
     return User(
       id: id ?? this.id,
@@ -59,7 +79,12 @@ class User {
       edad: edad ?? this.edad,
       intereses: intereses ?? this.intereses,
       foto: foto ?? this.foto,
+      isVerified: isVerified ?? this.isVerified,
+      isOnline: isOnline ?? this.isOnline,
+      lastSeen: lastSeen ?? this.lastSeen,
+      bio: bio ?? this.bio,
     );
   }
 }
+
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/comment.dart';
 import '../models/comment_vote.dart';
+import '../models/user.dart';
 import '../providers/posts_provider.dart';
+import '../services/firestore_service.dart';
 import '../utils/app_colors.dart';
 import 'user_avatar.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -27,6 +29,8 @@ class CommentsList extends StatefulWidget {
 
 class _CommentsListState extends State<CommentsList> {
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final GlobalKey _textFieldKey = GlobalKey();
   bool _isSubmitting = false;
 
   @override
@@ -34,12 +38,34 @@ class _CommentsListState extends State<CommentsList> {
     super.initState();
     // Configurar español para timeago
     timeago.setLocaleMessages('es', timeago.EsMessages());
+    
+    // Escuchar cuando el campo de texto recibe el foco
+    _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     _commentController.dispose();
     super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      // Hacer scroll al campo de texto cuando recibe el foco
+      Future.delayed(const Duration(milliseconds: 300), () {
+        final context = _textFieldKey.currentContext;
+        if (context != null) {
+          Scrollable.ensureVisible(
+            context,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -52,6 +78,7 @@ class _CommentsListState extends State<CommentsList> {
         
         // Campo de entrada de comentario
         Padding(
+          key: _textFieldKey,
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
@@ -64,6 +91,7 @@ class _CommentsListState extends State<CommentsList> {
               Expanded(
                 child: TextField(
                   controller: _commentController,
+                  focusNode: _focusNode,
                   decoration: InputDecoration(
                     hintText: 'Escribe un comentario...',
                     hintStyle: TextStyle(color: Colors.grey[400]),
@@ -222,11 +250,14 @@ class _CommentItem extends StatefulWidget {
 
 class _CommentItemState extends State<_CommentItem> {
   CommentVote? _userVote;
+  User? _commentUser;
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   @override
   void initState() {
     super.initState();
     _loadUserVote();
+    _loadCommentUser();
   }
 
   Future<void> _loadUserVote() async {
@@ -243,6 +274,19 @@ class _CommentItemState extends State<_CommentItem> {
     }
   }
 
+  Future<void> _loadCommentUser() async {
+    try {
+      final user = await _firestoreService.getUserById(widget.comment.userId);
+      if (mounted) {
+        setState(() {
+          _commentUser = user;
+        });
+      }
+    } catch (e) {
+      // Si falla, usar datos del comentario
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isOwner = widget.comment.userId == widget.currentUserId;
@@ -251,7 +295,7 @@ class _CommentItemState extends State<_CommentItem> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         UserAvatar(
-          photoUrl: widget.comment.userPhoto,
+          photoUrl: _commentUser?.foto ?? widget.comment.userPhoto,
           userName: widget.comment.userName,
           radius: 16,
         ),

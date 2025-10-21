@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import '../models/user.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 
 class MessagesProvider with ChangeNotifier {
   List<Message> _messages = [];
@@ -16,6 +17,7 @@ class MessagesProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   final FirestoreService _firestore = FirestoreService.instance;
+  final NotificationService _notificationService = NotificationService();
 
   // Cargar conversaciones del usuario
   Future<void> loadConversations(String currentUserId) async {
@@ -56,6 +58,7 @@ class MessagesProvider with ChangeNotifier {
           _messages = messages;
           _isLoading = false;
           notifyListeners();
+          debugPrint('Mensajes actualizados: ${messages.length}');
         },
         onError: (e) {
           debugPrint('Error loading messages stream: $e');
@@ -104,6 +107,17 @@ class MessagesProvider with ChangeNotifier {
         if (user != null) {
           _conversationUsers[receiverId] = user;
         }
+      }
+      
+      // Enviar notificación push
+      final sender = await _firestore.getUserById(senderId);
+      if (sender != null) {
+        await _notificationService.sendMessageNotification(
+          receiverId: receiverId,
+          senderName: sender.nombre,
+          messageText: text,
+          senderId: senderId,
+        );
       }
       
       notifyListeners();
@@ -180,10 +194,39 @@ class MessagesProvider with ChangeNotifier {
     _messages.clear();
     notifyListeners();
   }
+
+  // Reenviar mensaje
+  Future<void> forwardMessage(Message originalMessage, String newReceiverId) async {
+    try {
+      await _firestore.forwardMessage(originalMessage, newReceiverId);
+    } catch (e) {
+      debugPrint('Error forwarding message: $e');
+      rethrow;
+    }
+  }
+
+  // Vaciar mensajes de un chat
+  Future<void> clearChatMessages(String currentUserId, String otherUserId) async {
+    try {
+      await _firestore.clearChatMessages(currentUserId, otherUserId);
+      _messages.clear();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error clearing chat messages: $e');
+      rethrow;
+    }
+  }
 }
 
 extension on Message {
-  Message copyWith({String? id, String? imageUrl}) {
+  Message copyWith({
+    String? id, 
+    String? imageUrl,
+    bool? isForwarded,
+    String? originalSenderId,
+    String? originalSenderName,
+    DateTime? originalDate,
+  }) {
     return Message(
       id: id ?? this.id,
       emisorId: emisorId,
@@ -191,6 +234,10 @@ extension on Message {
       texto: texto,
       fecha: fecha,
       imageUrl: imageUrl ?? this.imageUrl,
+      isForwarded: isForwarded ?? this.isForwarded,
+      originalSenderId: originalSenderId ?? this.originalSenderId,
+      originalSenderName: originalSenderName ?? this.originalSenderName,
+      originalDate: originalDate ?? this.originalDate,
     );
   }
 }

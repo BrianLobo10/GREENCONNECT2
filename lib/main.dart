@@ -15,7 +15,16 @@ import 'screens/home_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/create_post_screen.dart';
+import 'screens/edit_post_screen.dart';
 import 'screens/user_profile_screen.dart';
+import 'screens/search_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/followers_screen.dart';
+import 'screens/forward_message_screen.dart';
+import 'screens/forward_messages_screen.dart';
+import 'services/call_service.dart';
+import 'screens/notification_settings_screen.dart';
+import 'models/message.dart';
 import 'utils/app_colors.dart';
 
 void main() async {
@@ -54,6 +63,9 @@ class _MyAppState extends State<MyApp> {
     
     // Cargar usuario guardado al iniciar
     _authProvider.loadSavedUser();
+    
+    // Inicializar servicio de llamadas
+    CallService.initialize();
   }
 
   @override
@@ -183,11 +195,55 @@ class _MyAppState extends State<MyApp> {
           builder: (context, state) => const CreatePostScreen(),
         ),
         GoRoute(
+          path: '/edit-post/:postId',
+          builder: (context, state) {
+            final postId = state.pathParameters['postId']!;
+            return EditPostScreen(postId: postId);
+          },
+        ),
+        GoRoute(
           path: '/profile/:userId',
           builder: (context, state) {
             final userId = state.pathParameters['userId']!;
             return UserProfileScreen(userId: userId);
           },
+        ),
+        GoRoute(
+          path: '/search',
+          builder: (context, state) => const SearchScreen(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/followers/:userId',
+          builder: (context, state) {
+            final userId = state.pathParameters['userId']!;
+            final type = state.uri.queryParameters['type'] ?? 'followers';
+            return FollowersScreen(
+              userId: userId,
+              isFollowers: type == 'followers',
+            );
+          },
+        ),
+        GoRoute(
+          path: '/forward-message',
+          builder: (context, state) {
+            final message = state.extra as Message;
+            return ForwardMessageScreen(message: message);
+          },
+        ),
+        GoRoute(
+          path: '/forward-messages',
+          builder: (context, state) {
+            final messages = state.extra as List<Message>;
+            return ForwardMessagesScreen(messages: messages);
+          },
+        ),
+        GoRoute(
+          path: '/notification-settings',
+          builder: (context, state) => const NotificationSettingsScreen(),
         ),
       ],
     );

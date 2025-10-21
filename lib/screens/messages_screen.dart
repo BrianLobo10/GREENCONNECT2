@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../utils/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/messages_provider.dart';
+import '../widgets/user_avatar.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
@@ -100,13 +101,10 @@ class MessagesScreen extends StatelessWidget {
                                 ),
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.all(12),
-                                  leading: CircleAvatar(
+                                  leading:                                   UserAvatar(
+                                    photoUrl: user.foto,
+                                    userName: user.nombre,
                                     radius: 30,
-                                    backgroundColor: AppColors.secondary,
-                                    child: Text(
-                                      user.foto ?? '👤',
-                                      style: const TextStyle(fontSize: 30),
-                                    ),
                                   ),
                                   title: Text(
                                     user.nombre,

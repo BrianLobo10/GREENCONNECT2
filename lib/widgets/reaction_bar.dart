@@ -35,7 +35,7 @@ class ReactionBar extends StatelessWidget {
         }
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -139,10 +139,10 @@ class _ReactionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(25),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.grey[300]!,
             width: 1.5,
@@ -153,16 +153,16 @@ class _ReactionButton extends StatelessWidget {
           children: [
             Image.asset(
               type.iconPath,
-              width: isSelected ? 26 : 24,
-              height: isSelected ? 26 : 24,
+              width: isSelected ? 32 : 28,
+              height: isSelected ? 32 : 28,
               fit: BoxFit.contain,
             ),
             if (count > 0) ...[
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               Text(
                 count.toString(),
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected ? AppColors.primary : Colors.grey[700],
                 ),

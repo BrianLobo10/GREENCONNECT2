@@ -119,6 +119,9 @@ class UsersScreen extends StatelessWidget {
                                 onMessage: () {
                                   context.push('/chat/${user.id}');
                                 },
+                                onTap: () {
+                                  context.push('/profile/${user.id}');
+                                },
                               );
                             },
                           ),

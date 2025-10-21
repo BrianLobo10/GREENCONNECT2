@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/posts_provider.dart';
+import '../services/firestore_service.dart';
 import '../utils/app_colors.dart';
 import '../widgets/post_card.dart';
 
@@ -34,23 +35,21 @@ class _PostsScreenState extends State<PostsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: AppColors.accent,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Image.asset(
                 'assets/icon/image.png',
-                width: 20,
-                height: 20,
-                fit: BoxFit.contain,
+                width: 18,
+                height: 18,
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Wayira Space',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -62,6 +61,15 @@ class _PostsScreenState extends State<PostsScreen> {
         ),
         backgroundColor: AppColors.primary,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              context.push('/search');
+            },
+          ),
+          _buildNotificationButton(),
+        ],
       ),
       body: Container(
         color: AppColors.background,
@@ -69,31 +77,51 @@ class _PostsScreenState extends State<PostsScreen> {
           onRefresh: () async {
             postsProvider.loadPosts();
           },
-        child: postsProvider.isLoading && postsProvider.posts.isEmpty
+          child: Column(
+            children: [
+              // Posts Section
+              Expanded(
+                child: postsProvider.isLoading && postsProvider.posts.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : postsProvider.error != null
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.error_outline,
                           size: 64,
-                          color: Colors.red,
+                          color: Colors.grey[400],
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Error: ${postsProvider.error}',
-                          style: const TextStyle(color: Colors.red),
+                          'Error al cargar publicaciones',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          postsProvider.error!,
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            postsProvider.clearError();
                             postsProvider.loadPosts();
                           },
-                          child: const Text('Reintentar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                          ),
+                          child: const Text(
+                            'Reintentar',
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ),
                       ],
                     ),
@@ -105,22 +133,22 @@ class _PostsScreenState extends State<PostsScreen> {
                           children: [
                             Icon(
                               Icons.article_outlined,
-                              size: 80,
+                              size: 64,
                               color: Colors.grey[400],
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No hay publicaciones aún',
+                              'No hay publicaciones',
                               style: TextStyle(
                                 fontSize: 18,
+                                fontWeight: FontWeight.bold,
                                 color: Colors.grey[600],
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '¡Sé el primero en publicar!',
+                              'Sé el primero en compartir algo',
                               style: TextStyle(
-                                fontSize: 14,
                                 color: Colors.grey[500],
                               ),
                             ),
@@ -134,28 +162,77 @@ class _PostsScreenState extends State<PostsScreen> {
                           return PostCard(
                             post: post,
                             onUserTap: () {
-                              // Navegar al perfil del usuario
-                              if (post.userId == currentUser?.id) {
-                                // Si es el usuario actual, ir a su propio perfil (tab)
-                                DefaultTabController.of(context).animateTo(2);
-                              } else {
-                                // Si es otro usuario, navegar a su perfil
+                              if (post.userId != currentUser?.id) {
                                 context.push('/profile/${post.userId}');
+                              } else {
+                                context.push('/profile');
                               }
                             },
                           );
                         },
                       ),
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/create-post');
-        },
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
     );
   }
-}
 
+  Widget _buildNotificationButton() {
+    final authProvider = context.watch<AuthProvider>();
+    final currentUser = authProvider.currentUser;
+    
+    if (currentUser == null) {
+      return IconButton(
+        icon: const Icon(Icons.notifications, color: Colors.white),
+        onPressed: () {
+          context.push('/notifications');
+        },
+      );
+    }
+    
+    return FutureBuilder<int>(
+      future: FirestoreService.instance.getUnreadNotificationsCount(currentUser.id!),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+        
+        return Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications, color: Colors.white),
+              onPressed: () {
+                context.push('/notifications');
+              },
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}

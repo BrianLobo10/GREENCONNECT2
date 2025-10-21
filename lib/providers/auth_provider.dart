@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _currentUser;
@@ -14,11 +15,15 @@ class AuthProvider with ChangeNotifier {
   int get likesCount => _likesCount;
 
   final FirestoreService _firestore = FirestoreService.instance;
+  final NotificationService _notificationService = NotificationService();
 
   // Cargar usuario guardado al iniciar la app
   Future<void> loadSavedUser() async {
     _isLoading = true;
     notifyListeners();
+    
+    // Inicializar notificaciones
+    await _notificationService.initialize();
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -28,6 +33,9 @@ class AuthProvider with ChangeNotifier {
         _currentUser = await _firestore.getUserById(userId);
         if (_currentUser != null) {
           await _loadLikesCount();
+          
+          // Guardar token FCM para notificaciones
+          await _notificationService.saveFCMToken(_currentUser!.id!);
         }
       }
     } catch (e) {

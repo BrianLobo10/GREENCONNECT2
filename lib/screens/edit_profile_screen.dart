@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../utils/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
+import '../widgets/champion_avatar_selector.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -114,8 +115,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             child: Column(
               children: [
                 // Avatar selector
+                // Botón de LoL (Prioridad)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => ChampionAvatarSelector(
+                          currentAvatarUrl: _selectedAvatar,
+                          onAvatarSelected: (url) {
+                            setState(() {
+                              _selectedAvatar = url;
+                            });
+                          },
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.sports_esports, size: 20),
+                    label: const Text('Elegir Campeón de LoL'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                ),
+                
                 Text(
-                  'Elige tu avatar',
+                  'O elige un emoji:',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
